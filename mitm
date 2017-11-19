@@ -1,0 +1,61 @@
+#!/bin/bash
+echo -e "\e[1mZone's MITM\e[21m"
+echo ""
+echo -e "Select interface:"
+
+IFS=$'\n' interface_list_dirty=($(netstat -i))
+interface_list_length=${#interface_list_dirty[@]}
+
+iface_list_min=1
+iface_list_max=$((interface_list_length-1))
+
+for (( i=((iface_list_min+1)); i <= $iface_list_max; i++ ))
+do 
+	#interface_token_list=${interface_list_dirty[$i]} 
+	#echo ${interface_token_list[@]}
+	echo -e " \e[92m[$((i - 1))]\e[39m"-${interface_list_dirty[$i]}  | head -n1 | awk '{print $1;}'
+	#echo $interface_list | awk -v N=0 '{print $N}'
+	#interface_name=${interface_name[0]}
+	
+	#echo "[$((i -1 ))]: $interface_name"
+done
+
+while true 
+do
+	read choice
+
+	# Skip other condition checks if the input is not a number.
+	if [ "$choice" -neq "$choice" ] 2>/dev/null; then
+		continue
+	fi
+
+	if [ "$choice" -gt "0" ] 2>/dev/null && 
+	[ "$choice" -lt $iface_list_max ] 2>/dev/null;
+	then
+		break
+	fi
+done
+
+iface_line=( ${interface_list_dirty[$((choice+1))]} )
+iface_name=$(echo $iface_line | head -n1 | awk '{print $1;}')
+
+echo -e "Using interface \e[1m$iface_name\e[21m"
+
+echo "Select access point (ESSID): "
+essid_list=($(sudo iwlist $iface_name scan | grep "ESSID" ))
+echo ${essid_list[1]}
+read choice
+
+echo "Enabling IP forwarding..."
+sudo sysctl -w net.ipv4.ip_forward=1
+
+#echo ${interface_list_dirty[$((choice+1))]} | head -n1| awk '{print $1;}'
+
+#echo $iface_name
+#echo ${interface_list_dirty[1]
+
+function cleanup {
+	echo "Disabling IP forwarding..."
+	sudo sysctl -w net.ipv4.ip_forward=0
+}
+trap cleanup EXIT
